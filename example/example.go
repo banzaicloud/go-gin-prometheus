@@ -30,7 +30,7 @@ func main() {
 		p := ginprometheus.NewPrometheus("gin", customMetrics)
 	*/
 
-	p := ginprometheus.NewPrometheus("gin")
+	p := ginprometheus.NewPrometheus("gin", nil)
 
 	p.Use(r)
 	r.GET("/", func(c *gin.Context) {

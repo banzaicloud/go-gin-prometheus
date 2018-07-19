@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 var defaultMetricPath = "/metrics"
@@ -116,7 +117,7 @@ type PrometheusPushGateway struct {
 }
 
 // NewPrometheus generates a new set of metrics with a certain subsystem name
-func NewPrometheus(subsystem string, customMetricsList ...[]*Metric) *Prometheus {
+func NewPrometheus(subsystem string, templates []string, customMetricsList ...[]*Metric) *Prometheus {
 
 	var metricsList []*Metric
 
@@ -134,7 +135,16 @@ func NewPrometheus(subsystem string, customMetricsList ...[]*Metric) *Prometheus
 		MetricsList: metricsList,
 		MetricsPath: defaultMetricPath,
 		ReqCntURLLabelMappingFn: func(c *gin.Context) string {
-			return c.Request.URL.String() // i.e. by default do nothing, i.e. return URL as is
+			url := c.Request.URL.String() // i.e. by default do nothing, i.e. return URL as is
+			for _, p := range c.Params {
+				for _, template := range templates {
+					if p.Key == template {
+						url = strings.Replace(url, p.Value, ":"+template, 1)
+						break
+					}
+				}
+			}
+			return url
 		},
 	}
 
