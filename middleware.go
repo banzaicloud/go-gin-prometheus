@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 var defaultMetricPath = "/metrics"
@@ -116,15 +117,9 @@ type PrometheusPushGateway struct {
 }
 
 // NewPrometheus generates a new set of metrics with a certain subsystem name
-func NewPrometheus(subsystem string, customMetricsList ...[]*Metric) *Prometheus {
+func NewPrometheus(subsystem string, notTemplates []string) *Prometheus {
 
 	var metricsList []*Metric
-
-	if len(customMetricsList) > 1 {
-		panic("Too many args. NewPrometheus( string, <optional []*Metric> ).")
-	} else if len(customMetricsList) == 1 {
-		metricsList = customMetricsList[0]
-	}
 
 	for _, metric := range standardMetrics {
 		metricsList = append(metricsList, metric)
@@ -134,7 +129,25 @@ func NewPrometheus(subsystem string, customMetricsList ...[]*Metric) *Prometheus
 		MetricsList: metricsList,
 		MetricsPath: defaultMetricPath,
 		ReqCntURLLabelMappingFn: func(c *gin.Context) string {
-			return c.Request.URL.String() // i.e. by default do nothing, i.e. return URL as is
+			url := c.Request.URL.String() // i.e. by default do nothing, i.e. return URL as is
+			for _, p := range c.Params {
+				i := 0
+				if len(notTemplates) == 0 {
+					url = strings.Replace(url, p.Value, ":"+p.Key, 1)
+				}
+				
+				for _, notTemplate := range notTemplates {
+					if p.Key == notTemplate {
+						break
+					} else {
+						i++
+						if i == len(notTemplates) {
+							url = strings.Replace(url, p.Value, ":"+p.Key, 1)
+						}
+					}
+				}
+			}
+			return url
 		},
 	}
 
