@@ -6,13 +6,13 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
-	"strings"
 )
 
 // Standard default metrics
@@ -130,7 +130,11 @@ func NewPrometheus(subsystem string, expandedParams []string) *Prometheus {
 				if contains(expandedParams, p.Key) {
 					continue
 				}
-				url = strings.Replace(url, p.Value, ":"+p.Key, 1)
+
+				// Overcome wildcard (*path) matching issue, which takes the beginning slash as well
+				value := strings.TrimPrefix(p.Value, "/")
+
+				url = strings.Replace(url, value, ":"+p.Key, 1)
 			}
 			return url
 		},
